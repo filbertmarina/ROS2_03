@@ -1,4 +1,4 @@
-from tutorial_interfaces.srv import FullNameSumService	
+from tutorial_interfaces.srv import FullNameSumService
 
 import rclpy
 from rclpy.node import Node
@@ -8,10 +8,12 @@ class MinimalService(Node):
 
     def __init__(self):
         super().__init__('minimal_service')
+        self.srv = self.create_service(FullNameSumService
+, 'add_two_ints', self.add_two_ints_callback)
 
     def add_two_ints_callback(self, request, response):
-        response.sum = request.a + request.b +request.c
-        self.get_logger().info('Incoming request\na: %d b: %d c: %d' % (request.a, request.b, request.c))
+        response.full_name = request.last_name + request.name +request.first_name
+        self.get_logger().info('Incoming request\na: %s b: %s c: %s' % (request.last_name, request.name, request.first_name))
 
         return response
 
