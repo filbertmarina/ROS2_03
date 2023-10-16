@@ -16,7 +16,7 @@ class TurtleBot(Node):
          self.pose_subscriber = self.create_subscription(Pose, '/turtle1/pose', self.update_pose, 10)
  
          self.pose = Pose()
-   
+         self.timer = self.create_timer(0.1, self.move2goal)
 
      def update_pose(self, data):
          self.pose = data
