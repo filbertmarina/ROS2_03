@@ -2,65 +2,58 @@ import rclpy
 import sys
 from geometry_msgs.msg import Twist
 from turtlesim.msg import Pose
-from math import pow, atan2, sqrt
+import math
 from rclpy.node import Node
 
+class Turtle(Node):
+    def __init__(self):
+        super().__init__("move_to_goal_Node")
+        self.cmd_vel_pub = self.create_publisher(Twist, '/turtle1/cmd_vel', 10)
+        self.pose_sub = self.create_subscription(Pose, '/turtle1/pose', self.pose_callback, 10)
+        self.timer = self.create_timer(0.1, self.go_to_goal)
+        self.pose = Pose()
 
-class TurtleBot(Node):
+    def pose_callback(self, data):
+        self.pose = data
 
-     def __init__(self):
-         super().__init__('turtlebot_controller')
+    def go_to_goal(self):
+        goal = Pose()
+        goal.x = float(sys.argv[1])
+        goal.y = float(sys.argv[2])
+        goal.theta = float(sys.argv[3])
 
-         self.velocity_publisher = self.create_publisher(Twist, '/turtle1/cmd_vel', 10)
+        new_vel = Twist()
 
-         self.pose_subscriber = self.create_subscription(Pose, '/turtle1/pose', self.update_pose, 10)
- 
-         self.pose = Pose()
-         self.timer = self.create_timer(0.1, self.move2goal)
+        distance_to_goal = math.sqrt((goal.x - self.pose.x)**2+(goal.y - self.pose.y)**2)
+        angle_to_goal =math.atan2(goal.y - self.pose.y , goal.x - self.pose.x)
 
-     def update_pose(self, data):
-         self.pose = data
- 
-     def steering_angle(self, goal_pose):
-         return atan2(goal_pose.y - self.pose.y, goal_pose.x - self.pose.x)
+        angle_error = angle_to_goal - self.pose.theta
+	
+        if distance_to_goal >= 0.1:
+            self.get_logger().info('Distance to the goal: {0}'.format(distance_to_goal))
+            if abs(angle_error) > 0.1:
+                new_vel.angular.z =  angle_error
+            else :
+                new_vel.angular.z = 0.0
+            new_vel.linear.x =  0.2*distance_to_goal
+        else :
+            if abs(goal.theta - self.pose.theta) > 0.001:
+                new_vel.angular.z = 2*(goal.theta - self.pose.theta)
+            else:
+                new_vel.linear.x= 0.0
+                new_vel.angular.z= 0.0
+                self.get_logger().info("Goal Reached ")
+                quit()
 
-     def move2goal(self):
-         const = 5
-         vel_msg = Twist()
-         goal_pose = Pose()
- 
-         # Get the input from the user.
-         goal_pose.x = float(sys.argv[1])
-         goal_pose.y = float(sys.argv[2])
- 
-         tolerance =  0.01 
- 
-         distance_to_goal = sqrt(pow((goal_pose.x - self.pose.x), 2) + 
-         			 pow((goal_pose.y - self.pose.y), 2))
-         angle_error = self.steering_angle(goal_pose) - self.pose.theta
- 
-         if abs(angle_error) > tolerance:
-             vel_msg.angular.z = const*angle_error  
-         elif distance_to_goal >= tolerance:
-             # Linear velocity in the x-axis.
-             vel_msg.linear.x = const*distance_to_goal 
-         else:
-             vel_msg.linear.x = 0.0
-             vel_msg.angular.z = 0.0
-             self.get_logger().info("Goal Reached!! ")
-             quit()
- 
-         # Publishing our vel_msg
-         self.velocity_publisher.publish(vel_msg)
- 
-         
+
+        self.cmd_vel_pub.publish(new_vel)
+
 def main(args=None):
     rclpy.init(args=args)
-    x = TurtleBot()
-    rclpy.spin(x)
-    x.destroy_node()
+    minimal_publisher = Turtle()
+    rclpy.spin(minimal_publisher)
+    minimal_publisher.destroy_node()
     rclpy.shutdown()
 
- 
 if __name__ == '__main__':
     main()
